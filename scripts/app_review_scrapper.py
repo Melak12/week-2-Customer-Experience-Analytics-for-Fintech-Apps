@@ -80,7 +80,7 @@ class AppReviewScraper:
         logging.info(f"Scraped {len(all_reviews)} reviews. Saving to {csv_path}")
         with open(csv_path, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
-            writer.writerow(['reviewId', 'userName', 'userImage', 'content', 'score', 'thumbsUpCount', 'reviewCreatedVersion', 'at', 'replyContent', 'repliedAt'])
+            writer.writerow(['reviewId', 'userName', 'content', 'score', 'thumbsUpCount', 'date',])
             for review in all_reviews:
                 writer.writerow([
                     review.get('reviewId'),
