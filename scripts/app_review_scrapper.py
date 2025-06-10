@@ -51,7 +51,7 @@ class AppReviewScraper:
         # Set default csv_filename if not provided
         csv_filename = f"{app_name.value.lower()}_reviews.csv"
 
-        logging.info(f"Starting to scrape reviews for app: {app_id}")
+        logging.info(f"Starting to scrape reviews for app: {app_name.value} (ID: {app_id})")
         all_reviews = []
         count = 0
         next_token = None
