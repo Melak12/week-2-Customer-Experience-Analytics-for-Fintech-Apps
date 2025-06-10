@@ -9,6 +9,7 @@ from nltk.stem import WordNetLemmatizer
 import logging
 from transformers import pipeline
 from enum import Enum
+from textblob import TextBlob
 
 from scripts.utils import AppName
 
@@ -27,10 +28,9 @@ class SentimentMethod(Enum):
     TEXT_BLOB = 'text_blob'
 
 class SentimentAnalysis:
-    def __init__(self, df, app_name: 'AppName', method: SentimentMethod = SentimentMethod.VADAR):
+    def __init__(self, df, app_name: 'AppName'):
         self.df = df
         self.app_name = app_name
-        self.method = method
         self.ensure_nltk_resources()
         self.sia = SentimentIntensityAnalyzer()
         # self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
@@ -105,7 +105,7 @@ class SentimentAnalysis:
                     return ('neutral', score)
             except Exception as e:
                 return ('neutral', 0.0)
-        bert_results = self.df['review'].apply(get_bert_label)
+        bert_results = self.df['processed_review'].apply(get_bert_label)
         self.df['bert_sentiment'] = bert_results.apply(lambda x: x[0])
         self.df['bert_score'] = bert_results.apply(lambda x: x[1])
         print("DistilBERT sentiment scores computed.")
@@ -119,15 +119,23 @@ class SentimentAnalysis:
         self.df['vader_sentiment'] = self.df['vader_score'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
         print("VADER sentiment scores computed.")
 
-    def aggregate_sentiment_by_rating(self):
+    def compute_textblob_sentiment(self):
+        # Compute TextBlob sentiment polarity for each review
+        print("Computing TextBlob sentiment scores...")
+        self.df['textblob_score'] = self.df['processed_review'].apply(lambda x: TextBlob(str(x)).sentiment.polarity)
+        # classify sentiment based on polarity
+        self.df['textblob_sentiment'] = self.df['textblob_score'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
+        print("TextBlob sentiment scores computed.")
+
+    def aggregate_sentiment_by_rating(self,  method: SentimentMethod = SentimentMethod.VADER):
         # Aggregate mean sentiment score by rating
-        if self.method == SentimentMethod.BERT:
+        if method == SentimentMethod.BERT:
             # For BERT, use bert_score (probability of predicted label)
             agg = self.df.groupby('rating')['bert_score'].mean().reset_index(name='mean_bert_score')
-        elif self.method == SentimentMethod.VADAR:
+        elif method == SentimentMethod.VADER:
             agg = self.df.groupby('rating')['vader_score'].mean().reset_index(name='mean_vader_score')
         else:
             raise ValueError('Unknown method for aggregation')
-        print(f"Aggregated sentiment by rating using {SentimentMethod[self.method]}:")
+        print(f"Aggregated sentiment by rating using {SentimentMethod[method]}:")
         print(agg)
         return agg
