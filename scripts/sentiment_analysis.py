@@ -8,6 +8,7 @@ from nltk.sentiment import SentimentIntensityAnalyzer
 from nltk.stem import WordNetLemmatizer
 import logging
 from transformers import pipeline
+from enum import Enum
 
 from scripts.utils import AppName
 
@@ -20,10 +21,16 @@ from scripts.utils import AppName
 # - bank: The name of the bank (app) the review is for
 # - source: The source of the review (e.g. Google Play Store)
 
+class SentimentMethod(Enum):
+    VADAR = 'vadar'
+    BERT = 'bert'
+    TEXT_BLOB = 'text_blob'
+
 class SentimentAnalysis:
-    def __init__(self, df, app_name: 'AppName'):
+    def __init__(self, df, app_name: 'AppName', method: SentimentMethod = SentimentMethod.VADAR):
         self.df = df
         self.app_name = app_name
+        self.method = method
         self.ensure_nltk_resources()
         self.sia = SentimentIntensityAnalyzer()
         # self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
@@ -112,15 +119,15 @@ class SentimentAnalysis:
         self.df['vader_sentiment'] = self.df['vader_score'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
         print("VADER sentiment scores computed.")
 
-    def aggregate_sentiment_by_rating(self, method='bert'):
+    def aggregate_sentiment_by_rating(self):
         # Aggregate mean sentiment score by rating
-        if method == 'bert':
+        if self.method == SentimentMethod.BERT:
             # For BERT, use bert_score (probability of predicted label)
             agg = self.df.groupby('rating')['bert_score'].mean().reset_index(name='mean_bert_score')
-        elif method == 'vader':
+        elif self.method == SentimentMethod.VADAR:
             agg = self.df.groupby('rating')['vader_score'].mean().reset_index(name='mean_vader_score')
         else:
             raise ValueError('Unknown method for aggregation')
-        print(f"Aggregated sentiment by rating using {method}:")
+        print(f"Aggregated sentiment by rating using {SentimentMethod[self.method]}:")
         print(agg)
         return agg
