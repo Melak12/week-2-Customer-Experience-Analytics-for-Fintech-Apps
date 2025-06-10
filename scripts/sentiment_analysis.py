@@ -5,6 +5,7 @@ import nltk
 from nltk.corpus import stopwords
 from nltk import word_tokenize, ngrams, FreqDist
 from nltk.sentiment import SentimentIntensityAnalyzer
+from nltk.stem import WordNetLemmatizer
 import logging
 from transformers import pipeline
 
@@ -23,9 +24,9 @@ class SentimentAnalysis:
     def __init__(self, df, app_name: 'AppName'):
         self.df = df
         self.app_name = app_name
-        self.stop_words = set(stopwords.words('english'))
+        self.ensure_nltk_resources()
         self.sia = SentimentIntensityAnalyzer()
-        self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
+        # self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
 
     def format_datetime(self):
         # Convert 'date' column to datetime format
@@ -43,11 +44,43 @@ class SentimentAnalysis:
         else:
             print("No 'date' column found in DataFrame.")
 
-    def compute_vader_sentiment(self):
-        # Compute VADER sentiment scores for each review
-        self.df['vader_compound'] = self.df['review'].apply(lambda x: self.sia.polarity_scores(str(x))['compound'])
-        self.df['vader_sentiment'] = self.df['vader_compound'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
-        print("VADER sentiment scores computed.")
+   
+
+    def ensure_nltk_resources(self):
+        # Ensure NLTK resources are available
+        print("Checking for NLTK resources...")
+        try:
+            import nltk
+        except ImportError:
+            raise ImportError("NLTK is not installed. Please install it using 'pip install nltk'.")
+        try:
+            nltk.data.find('tokenizers/punkt')
+            nltk.data.find('corpora/stopwords')
+            nltk.data.find('corpora/wordnet')
+            nltk.data.find('sentiment/vader_lexicon.zip')
+            print("NLTK resources are available.")
+        except LookupError:
+            print("NLTK resources not found. Downloading...")
+            nltk.download('punkt', quiet=True)
+            nltk.download('stopwords', quiet=True)
+            nltk.download('wordnet', quiet=True)
+            nltk.download('vader_lexicon', quiet=True)
+            print("NLTK resources downloaded.")
+
+    def preprocess_reviews(self):
+        # Preprocess reviews: remove stop words, tokenize, lemmatize, and extract n-grams
+        print("Preprocessing reviews...")
+        def preprocess_text(text):
+            tokens = word_tokenize(str(text).lower())
+            stop_words = set(stopwords.words('english'))
+            lemmatizer = WordNetLemmatizer()
+            tokens = [lemmatizer.lemmatize(word) for word in tokens if word.isalnum() and word not in stop_words]
+            
+            return ' '.join(tokens)
+
+        self.df['processed_review'] = self.df['review'].apply(preprocess_text)
+        print("Reviews preprocessed. Tokens extracted.")
+        
 
     def compute_bert_sentiment(self):
         # Compute DistilBERT sentiment for each review
@@ -69,6 +102,15 @@ class SentimentAnalysis:
         self.df['bert_sentiment'] = bert_results.apply(lambda x: x[0])
         self.df['bert_score'] = bert_results.apply(lambda x: x[1])
         print("DistilBERT sentiment scores computed.")
+    
+    def compute_vader_sentiment(self):
+        # Compute VADER sentiment scores for each review
+        print("Computing VADER sentiment scores...")
+        self.df['vader_score'] = self.df['processed_review'].apply(lambda x: self.sia.polarity_scores(str(x))['compound'])
+    
+        # classify sentiment based on compound score
+        self.df['vader_sentiment'] = self.df['vader_score'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
+        print("VADER sentiment scores computed.")
 
     def aggregate_sentiment_by_rating(self, method='bert'):
         # Aggregate mean sentiment score by rating
@@ -76,7 +118,7 @@ class SentimentAnalysis:
             # For BERT, use bert_score (probability of predicted label)
             agg = self.df.groupby('rating')['bert_score'].mean().reset_index(name='mean_bert_score')
         elif method == 'vader':
-            agg = self.df.groupby('rating')['vader_compound'].mean().reset_index(name='mean_vader_compound')
+            agg = self.df.groupby('rating')['vader_score'].mean().reset_index(name='mean_vader_score')
         else:
             raise ValueError('Unknown method for aggregation')
         print(f"Aggregated sentiment by rating using {method}:")
