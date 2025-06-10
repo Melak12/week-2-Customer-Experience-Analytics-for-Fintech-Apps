@@ -8,20 +8,10 @@ from google_play_scraper import Sort, reviews
 from enum import Enum
 import pandas as pd
 
+from scripts.utils import AppName, get_appid
+
 # This script scrapes user reviews from the Google Play Store for a specified app.
 # It saves the reviews to a CSV file inside the Data directory and can be scheduled to run at regular intervals.
-
-# Application name and id mapping to be used for scraping
-class AppName(Enum):
-    CBE = 'CBE'
-    BOA = 'BOA'
-    DASHEN = 'DASHEN'
-
-APP_NAME_ID_MAPPING = {
-    AppName.CBE: 'com.combanketh.mobilebanking',
-    AppName.BOA: 'com.boa.boaMobileBanking',
-    AppName.DASHEN: 'com.dashen.dashensuperapp',
-}
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -30,21 +20,11 @@ class AppReviewScraper:
         self.num_reviews = num_reviews
         pass
 
-    def get_appid(self, app_name: 'AppName'):
-        """
-        Get the app ID for a given app name (AppName enum).
-        """
-        if app_name in APP_NAME_ID_MAPPING:
-            return APP_NAME_ID_MAPPING[app_name]
-        else:
-            logging.error(f"App name '{app_name}' not found in mapping.")
-            return None
-
     def scrape_reviews(self, app_name: 'AppName'):
         """
         Scrape user reviews from Google Play Store for a given app_name (AppName enum) and save to CSV.
         """
-        app_id = self.get_appid(app_name)
+        app_id = get_appid(app_name)
         if not app_id:
             logging.error(f"Invalid app name: {app_name}")
             return
