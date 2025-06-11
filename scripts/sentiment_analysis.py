@@ -1,3 +1,4 @@
+from collections import Counter
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -172,3 +173,44 @@ class SentimentAnalysis:
         plt.legend(title='Method')
         plt.tight_layout()
         plt.show()
+    
+    def keyword_extraction(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15):
+        """
+        Extract and display top keywords from positive and negative reviews for the specified sentiment method.
+        Args:
+            method (SentimentMethod): The sentiment method to use for filtering reviews.
+            top_n (int): Number of top keywords to extract for each sentiment.
+        """
+        
+        # Map method to sentiment column
+        method_col_map = {
+            SentimentMethod.VADER: 'vader_sentiment',
+            SentimentMethod.BERT: 'bert_sentiment',
+            SentimentMethod.TEXT_BLOB: 'textblob_sentiment',
+        }
+        col = method_col_map.get(method)
+        if col not in self.df.columns:
+            print(f"Sentiment column '{col}' not found. Please compute sentiment using {method.value} first.")
+            return
+        
+        stop_words = set(stopwords.words('english'))
+        lemmatizer = WordNetLemmatizer()
+        
+        def extract_keywords(texts):
+            tokens = []
+            for text in texts:
+                words = word_tokenize(str(text).lower())
+                words = [lemmatizer.lemmatize(w) for w in words if w.isalnum() and w not in stop_words]
+                tokens.extend(words)
+            return Counter(tokens).most_common(top_n)
+        
+        keywords = {}
+        for sentiment in ['positive', 'negative']:
+            reviews = self.df[self.df[col] == sentiment]['review']
+            keywords[sentiment] = extract_keywords(reviews)
+        
+        print(f"Top {top_n} keywords in positive reviews ({method.value}):")
+        print(keywords['positive'])
+        print(f"\nTop {top_n} keywords in negative reviews ({method.value}):")
+        print(keywords['negative'])
+        return keywords
