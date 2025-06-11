@@ -6,7 +6,7 @@ import pandas as pd
 import json
 import os
 from dotenv import load_dotenv
-from db_manager import DBManager
+from scripts.db_manager import DBManager
 
 class DBIO:
     def __init__(self):
@@ -17,12 +17,12 @@ class DBIO:
     def save_bank(self, name, info=None):
         """Insert a bank if not exists. Returns bank id."""
         with self.conn.cursor() as cur:
-            cur.execute("SELECT id FROM Banks WHERE name=%s", (name,))
+            cur.execute("SELECT id FROM banks WHERE name=%s", (name,))
             result = cur.fetchone()
             if result:
                 return result[0]
             cur.execute(
-                "INSERT INTO Banks (name, info) VALUES (%s, %s) RETURNING id",
+                "INSERT INTO banks (name, info) VALUES (%s, %s) RETURNING id",
                 (name, json.dumps(info) if info else None)
             )
             bank_id = cur.fetchone()[0]
@@ -30,13 +30,13 @@ class DBIO:
             return bank_id
 
     def save_reviews(self, bank_name, reviews_df: pd.DataFrame):
-        """Save processed reviews DataFrame to the Reviews table."""
+        """Save processed reviews DataFrame to the reviews table."""
         bank_id = self.save_bank(bank_name)
         with self.conn.cursor() as cur:
             for _, row in reviews_df.iterrows():
                 cur.execute(
                     """
-                    INSERT INTO Reviews (bank_id, review, date, source, processed_review, bert_sentiment, bert_score, vader_score, vader_sentiment, textblob_score, textblob_sentiment)
+                    INSERT INTO reviews (bank_id, review, date, source, processed_review, bert_sentiment, bert_score, vader_score, vader_sentiment, textblob_score, textblob_sentiment)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
@@ -58,8 +58,8 @@ class DBIO:
     def fetch_reviews(self, bank_name=None):
         """Fetch reviews for a given bank or all banks as a DataFrame."""
         query = """
-        SELECT b.name as bank, r.* FROM Reviews r
-        JOIN Banks b ON r.bank_id = b.id
+        SELECT b.name as bank, r.* FROM reviews r
+        JOIN banks b ON r.bank_id = b.id
         """
         params = ()
         if bank_name:
@@ -67,6 +67,16 @@ class DBIO:
             params = (bank_name,)
         df = pd.read_sql(query, self.conn, params=params)
         return df
+
+    def clear_reviews_for_bank(self, bank_name):
+        """Delete all reviews for a specific bank by name."""
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT id FROM banks WHERE name=%s", (bank_name,))
+            result = cur.fetchone()
+            if result:
+                bank_id = result[0]
+                cur.execute("DELETE FROM reviews WHERE bank_id=%s", (bank_id,))
+                self.conn.commit()
 
     def close(self):
         self.db.close()

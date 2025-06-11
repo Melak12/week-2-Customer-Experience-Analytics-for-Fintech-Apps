@@ -170,6 +170,103 @@ analysis.plot_theme_map(method=SentimentMethod.BERT)
 - All visualizations are generated using matplotlib and seaborn.
 - The class is designed to be extensible for additional sentiment or theme extraction methods.
 
+## Database Integration
+
+### Overview
+This project supports storing and managing cleaned and processed review data in a local PostgreSQL database (`bank_reviews`). Database operations are handled by two scripts:
+- `db_manager.py`: Handles connection management and table creation.
+- `db_io.py`: Handles saving, fetching, and clearing review and bank data.
+
+### Database Setup
+
+#### 1. Environment Variables
+Database credentials are read from a `.env` file. Example `.env`:
+```
+DB_NAME=bank_reviews
+DB_USER=postgres
+DB_PASSWORD=yourpassword
+DB_HOST=localhost
+DB_PORT=5432
+```
+
+#### 2. Table Creation
+To create the required tables, run:
+```python
+## On the terminal
+> python scripts/db_manager.py 
+
+## In the code
+from scripts.db_manager import DBManager
+
+db = DBManager()
+db.create_tables()
+db.close()
+```
+This will create two tables if they do not exist:
+- `banks`: Stores bank information (id, name, info)
+- `reviews`: Stores processed reviews and sentiment data (id, bank_id, review, date, source, processed_review, bert_sentiment, bert_score, vader_score, vader_sentiment, textblob_score, textblob_sentiment)
+
+#### 3. Saving and Fetching Data
+Use `db_io.py` for all data operations:
+
+- **Saving reviews:**
+```python
+from scripts.db_io import DBIO
+import pandas as pd
+
+dfio = DBIO()
+dfio.save_reviews('CBE', reviews_df)  # reviews_df is your processed DataFrame
+dfio.close()
+```
+- **Fetching reviews:**
+```python
+dfio = DBIO()
+df = dfio.fetch_reviews('CBE')  # Fetch reviews for CBE
+dfio.close()
+```
+- **Clearing reviews for a bank:**
+```python
+dfio = DBIO()
+dfio.clear_reviews_for_bank('CBE')
+dfio.close()
+```
+
+#### 4. Integration with Sentiment Analysis
+The `compute_sentiment()` method in `sentiment_analysis.py` automatically saves sentiment results to the database and clears existing reviews for the bank before saving new ones to avoid duplication.
+
+#### 5. Table Schema
+- **banks**
+    - `id` (SERIAL PRIMARY KEY)
+    - `name` (VARCHAR, unique)
+    - `info` (JSONB, optional)
+- **reviews**
+    - `id` (SERIAL PRIMARY KEY)
+    - `bank_id` (INTEGER, foreign key to banks)
+    - `review` (TEXT)
+    - `date` (TIMESTAMP)
+    - `source` (VARCHAR)
+    - `processed_review` (TEXT)
+    - `bert_sentiment` (VARCHAR)
+    - `bert_score` (FLOAT)
+    - `vader_score` (FLOAT)
+    - `vader_sentiment` (VARCHAR)
+    - `textblob_score` (FLOAT)
+    - `textblob_sentiment` (VARCHAR)
+
+#### 6. Requirements
+- `psycopg2`
+- `python-dotenv`
+
+Install with:
+```
+pip install psycopg2-binary python-dotenv
+```
+
+#### 7. Notes
+- All database operations are modular and reusable.
+- Table and column names are lowercase for PostgreSQL compatibility.
+- The database must be running locally and accessible with the credentials in your `.env` file.
+
 ---
 
 For questions or issues, please refer to the code comments or contact the project maintainer.

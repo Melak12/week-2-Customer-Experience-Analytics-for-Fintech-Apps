@@ -29,19 +29,19 @@ class DBManager:
 
     def create_tables(self):
         """
-        Create Banks and Reviews tables if they do not exist.
+        Create banks and reviews tables if they do not exist (using lowercase names for compatibility).
         """
         create_banks = '''
-        CREATE TABLE IF NOT EXISTS Banks (
+        CREATE TABLE IF NOT EXISTS banks (
             id SERIAL PRIMARY KEY,
             name VARCHAR(100) UNIQUE NOT NULL,
             info JSONB
         );
         '''
         create_reviews = '''
-        CREATE TABLE IF NOT EXISTS Reviews (
+        CREATE TABLE IF NOT EXISTS reviews (
             id SERIAL PRIMARY KEY,
-            bank_id INTEGER REFERENCES Banks(id),
+            bank_id INTEGER REFERENCES banks(id),
             review TEXT,
             date TIMESTAMP,
             source VARCHAR(100),
