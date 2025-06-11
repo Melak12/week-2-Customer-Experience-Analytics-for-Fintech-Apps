@@ -172,17 +172,23 @@ class SentimentAnalysis:
         plt.tight_layout()
         plt.show()
     
-    def keyword_extraction(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15, plot_wordcloud: bool = True):
+    def keyword_extraction(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15, plot_wordcloud: bool = True, use_spacy: bool = True):
         """
         Extract and display top keywords from positive and negative reviews for the specified sentiment method.
-        Optionally, plot word clouds for each sentiment.
+        Optionally, plot word clouds for each sentiment. Uses spaCy for improved keyword extraction if use_spacy=True.
         Args:
             method (SentimentMethod): The sentiment method to use for filtering reviews.
             top_n (int): Number of top keywords to extract for each sentiment.
             plot_wordcloud (bool): Whether to plot word clouds for positive and negative reviews.
+            use_spacy (bool): Whether to use spaCy for keyword extraction (noun chunks and nouns).
         """
         
-        # Map method to sentiment column
+        if use_spacy:
+            try:
+                import spacy
+            except ImportError:
+                raise ImportError("spaCy is not installed. Please install it using 'pip install spacy' and download the English model with 'python -m spacy download en_core_web_sm'.")
+            nlp = spacy.load('en_core_web_sm')  # Do NOT disable parser!
         method_col_map = {
             SentimentMethod.VADER: 'vader_sentiment',
             SentimentMethod.BERT: 'bert_sentiment',
@@ -192,15 +198,29 @@ class SentimentAnalysis:
         if col not in self.df.columns:
             print(f"Sentiment column '{col}' not found. Please compute sentiment using {method.value} first.")
             return
-        stop_words = set(stopwords.words('english'))
-        lemmatizer = WordNetLemmatizer()
-        def extract_keywords(texts):
+        def extract_keywords_spacy(texts):
+            tokens = []
+            for doc in nlp.pipe((str(t) for t in texts), batch_size=50):  # Do not disable parser
+                # Extract noun chunks and nouns
+                tokens.extend([
+                    chunk.lemma_.lower() for chunk in doc.noun_chunks
+                    if len(chunk) > 1 and not chunk.root.is_stop
+                ])
+                tokens.extend([
+                    token.lemma_.lower() for token in doc
+                    if token.pos_ == 'NOUN' and not token.is_stop and token.is_alpha
+                ])
+            return Counter(tokens).most_common(top_n), ' '.join(tokens)
+        def extract_keywords_nltk(texts):
+            stop_words = set(stopwords.words('english'))
+            lemmatizer = WordNetLemmatizer()
             tokens = []
             for text in texts:
                 words = word_tokenize(str(text).lower())
                 words = [lemmatizer.lemmatize(w) for w in words if w.isalnum() and w not in stop_words]
                 tokens.extend(words)
             return Counter(tokens).most_common(top_n), ' '.join(tokens)
+        extract_keywords = extract_keywords_spacy if use_spacy else extract_keywords_nltk
         keywords = {}
         wordcloud_texts = {}
         for sentiment in ['positive', 'negative']:
@@ -211,7 +231,6 @@ class SentimentAnalysis:
         print(f"\nTop {top_n} keywords in negative reviews ({method.value}):")
         print(keywords['negative'])
         if plot_wordcloud:
-            import matplotlib.pyplot as plt
             fig, axes = plt.subplots(1, 2, figsize=(16, 7))
             for idx, sentiment in enumerate(['positive', 'negative']):
                 wc = WordCloud(width=800, height=400, background_color='white', colormap='Greens' if sentiment=='positive' else 'Reds').generate(wordcloud_texts[sentiment])
