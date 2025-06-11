@@ -23,7 +23,7 @@ from scripts.utils import AppName
 # - source: The source of the review (e.g. Google Play Store)
 
 class SentimentMethod(Enum):
-    VADAR = 'vadar'
+    VADER = 'vader'
     BERT = 'bert'
     TEXT_BLOB = 'text_blob'
 
@@ -139,3 +139,35 @@ class SentimentAnalysis:
         print(f"Aggregated sentiment by rating using {SentimentMethod[method]}:")
         print(agg)
         return agg
+
+    def plot_sentiment_distribution(self):
+        """
+        Visualize the sentiment distribution for all sentiment methods (VADER, BERT, TEXT_BLOB).
+        """
+       
+        methods = []
+        sentiment_cols = []
+        if 'vader_sentiment' in self.df.columns:
+            methods.append('VADER')
+            sentiment_cols.append('vader_sentiment')
+        if 'bert_sentiment' in self.df.columns:
+            methods.append('BERT')
+            sentiment_cols.append('bert_sentiment')
+        if 'textblob_sentiment' in self.df.columns:
+            methods.append('TEXT_BLOB')
+            sentiment_cols.append('textblob_sentiment')
+        if not sentiment_cols:
+            print("No sentiment columns found. Please compute sentiment first.")
+            return
+        n_methods = len(sentiment_cols)
+        fig, axes = plt.subplots(1, n_methods, figsize=(6*n_methods, 5))
+        if n_methods == 1:
+            axes = [axes]
+        for ax, method, col in zip(axes, methods, sentiment_cols):
+            sns.countplot(x=self.df[col], order=['positive', 'neutral', 'negative'], ax=ax, palette='viridis', hue=self.df[col])
+            ax.set_title(f"{method} Sentiment Distribution for {self.app_name.value}")
+            ax.legend(title='Sentiment', loc='upper right')
+            ax.set_xlabel("Sentiment")
+            ax.set_ylabel("Count")
+        plt.tight_layout()
+        plt.show()
