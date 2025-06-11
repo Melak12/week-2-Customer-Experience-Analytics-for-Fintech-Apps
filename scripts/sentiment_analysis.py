@@ -240,3 +240,72 @@ class SentimentAnalysis:
             plt.tight_layout()
             plt.show()
         return keywords
+    
+    def extract_themes(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15, use_spacy: bool = True):
+        """
+        Group related keywords and phrases into 3-5 overarching themes per bank.
+        Args:
+            method (SentimentMethod): The sentiment method to use for filtering reviews.
+            top_n (int): Number of top keywords to extract for each sentiment.
+            use_spacy (bool): Whether to use spaCy for keyword extraction.
+        Returns:
+            dict: Mapping of themes to their top keywords/phrases.
+        """
+        # Define themes and associated keywords/phrases (expand as needed)
+        themes = {
+            'Account Access Issues': ['login', 'access', 'password', 'account', 'locked', 'reset', 'sign in', 'authentication'],
+            'Transaction Performance': ['transaction', 'transfer', 'payment', 'deposit', 'withdraw', 'delay', 'pending', 'failed', 'success'],
+            'User Interface & Experience': ['app', 'interface', 'design', 'navigation', 'easy', 'difficult', 'crash', 'slow', 'responsive', 'layout', 'update'],
+            'Customer Support': ['support', 'help', 'service', 'response', 'call', 'contact', 'assistance', 'staff', 'agent'],
+            'Feature Requests': ['feature', 'add', 'option', 'missing', 'suggest', 'request', 'improve', 'update', 'new', 'functionality']
+        }
+        # Get keywords for both positive and negative reviews
+        keywords = self.keyword_extraction(method=method, top_n=top_n*2, plot_wordcloud=False, use_spacy=use_spacy)
+        # Flatten keywords to a list of words/phrases
+        all_keywords = [kw for sent in ['positive', 'negative'] for kw, _ in keywords[sent]]
+        # Group keywords into themes
+        theme_map = {theme: [] for theme in themes}
+        for kw in all_keywords:
+            assigned = False
+            for theme, theme_keywords in themes.items():
+                if any(tk in kw for tk in theme_keywords):
+                    theme_map[theme].append(kw)
+                    assigned = True
+                    break
+            if not assigned:
+                # Optionally, group unassigned keywords under 'Other'
+                theme_map.setdefault('Other', []).append(kw)
+        # Get top keywords per theme
+        for theme in theme_map:
+            theme_map[theme] = Counter(theme_map[theme]).most_common(top_n)
+        print(f"\nThemes and top keywords/phrases for {self.app_name.value}:")
+        for theme, kws in theme_map.items():
+            print(f"\n{theme}:")
+            print([kw for kw, _ in kws])
+        return theme_map
+    
+    def plot_theme_map(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15, use_spacy: bool = True):
+        """
+        Visualize the theme map as a horizontal bar chart showing the count of keywords/phrases per theme.
+        Args:
+            method (SentimentMethod): The sentiment method to use for filtering reviews.
+            top_n (int): Number of top keywords to extract for each sentiment.
+            use_spacy (bool): Whether to use spaCy for keyword extraction.
+        """
+        theme_map = self.extract_themes(method=method, top_n=top_n, use_spacy=use_spacy)
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        # Prepare data for plotting
+        theme_counts = {theme: sum(count for _, count in kws) for theme, kws in theme_map.items()}
+        themes = list(theme_counts.keys())
+        counts = list(theme_counts.values())
+        # Sort by count
+        sorted_pairs = sorted(zip(themes, counts), key=lambda x: x[1], reverse=True)
+        sorted_themes, sorted_counts = zip(*sorted_pairs)
+        plt.figure(figsize=(10, 6))
+        sns.barplot(x=list(sorted_counts), y=list(sorted_themes), palette='viridis')
+        plt.xlabel('Keyword/Phrase Count')
+        plt.ylabel('Theme')
+        plt.title(f'Top Themes in Reviews for {self.app_name.value}')
+        plt.tight_layout()
+        plt.show()
