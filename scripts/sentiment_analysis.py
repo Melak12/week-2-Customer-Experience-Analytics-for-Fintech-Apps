@@ -11,6 +11,7 @@ import logging
 from transformers import pipeline
 from enum import Enum
 from textblob import TextBlob
+from wordcloud import WordCloud
 
 from scripts.utils import AppName
 
@@ -145,9 +146,6 @@ class SentimentAnalysis:
         """
         Visualize the sentiment distribution for all sentiment methods (VADER, BERT, TEXT_BLOB) in a single grouped bar chart.
         """
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        import pandas as pd
         # Collect available sentiment columns
         sentiment_methods = {
             'VADER': 'vader_sentiment',
@@ -174,12 +172,14 @@ class SentimentAnalysis:
         plt.tight_layout()
         plt.show()
     
-    def keyword_extraction(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15):
+    def keyword_extraction(self, method: SentimentMethod = SentimentMethod.VADER, top_n: int = 15, plot_wordcloud: bool = True):
         """
         Extract and display top keywords from positive and negative reviews for the specified sentiment method.
+        Optionally, plot word clouds for each sentiment.
         Args:
             method (SentimentMethod): The sentiment method to use for filtering reviews.
             top_n (int): Number of top keywords to extract for each sentiment.
+            plot_wordcloud (bool): Whether to plot word clouds for positive and negative reviews.
         """
         
         # Map method to sentiment column
@@ -192,25 +192,32 @@ class SentimentAnalysis:
         if col not in self.df.columns:
             print(f"Sentiment column '{col}' not found. Please compute sentiment using {method.value} first.")
             return
-        
         stop_words = set(stopwords.words('english'))
         lemmatizer = WordNetLemmatizer()
-        
         def extract_keywords(texts):
             tokens = []
             for text in texts:
                 words = word_tokenize(str(text).lower())
                 words = [lemmatizer.lemmatize(w) for w in words if w.isalnum() and w not in stop_words]
                 tokens.extend(words)
-            return Counter(tokens).most_common(top_n)
-        
+            return Counter(tokens).most_common(top_n), ' '.join(tokens)
         keywords = {}
+        wordcloud_texts = {}
         for sentiment in ['positive', 'negative']:
             reviews = self.df[self.df[col] == sentiment]['review']
-            keywords[sentiment] = extract_keywords(reviews)
-        
+            keywords[sentiment], wordcloud_texts[sentiment] = extract_keywords(reviews)
         print(f"Top {top_n} keywords in positive reviews ({method.value}):")
         print(keywords['positive'])
         print(f"\nTop {top_n} keywords in negative reviews ({method.value}):")
         print(keywords['negative'])
+        if plot_wordcloud:
+            import matplotlib.pyplot as plt
+            fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+            for idx, sentiment in enumerate(['positive', 'negative']):
+                wc = WordCloud(width=800, height=400, background_color='white', colormap='Greens' if sentiment=='positive' else 'Reds').generate(wordcloud_texts[sentiment])
+                axes[idx].imshow(wc, interpolation='bilinear')
+                axes[idx].set_title(f"{sentiment.capitalize()} Reviews WordCloud ({method.value})", fontsize=16)
+                axes[idx].axis('off')
+            plt.tight_layout()
+            plt.show()
         return keywords
