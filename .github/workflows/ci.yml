@@ -17,10 +17,17 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          # Remove pywin32 from requirements if not on Windows
+          if [[ "$(uname -s)" != "MINGW"* && "$(uname -s)" != "CYGWIN"* && "$(uname -s)" != "MSYS"* ]]; then
+            grep -v '^pywin32' requirements.txt > requirements-nopywin32.txt
+            pip install -r requirements-nopywin32.txt
+          else
+            pip install -r requirements.txt
+          fi
 
       - name: Run tests
         run: |

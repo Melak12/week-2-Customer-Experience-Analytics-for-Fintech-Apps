@@ -13,6 +13,7 @@ from enum import Enum
 from textblob import TextBlob
 from wordcloud import WordCloud
 
+from scripts.db_io import DBIO
 from scripts.utils import AppName
 
 ## This script performs sentiment analysis and keyword extraction on financial app reviews based on the data provided in a DataFrame which is loaded from ../Data/cleaned/<appName>_reviews_cleaned.csv (e.g. ../Data/cleaned/cbe_reviews_cleaned.csv).
@@ -157,6 +158,11 @@ class SentimentAnalysis:
             gold_path = os.path.join(gold_dir, f"{bank_name}_reviews_gold.csv")
             self.df.to_csv(gold_path, index=False)
             print(f"Sentiment results saved to {gold_path}")
+        # Save to database (clear existing reviews for this bank first)
+        dbio = DBIO()
+        dbio.clear_reviews_for_bank(str(self.app_name.value))
+        dbio.save_reviews(str(self.app_name.value), self.df)
+        dbio.close()
 
     def aggregate_sentiment_by_rating(self,  method: SentimentMethod = SentimentMethod.VADER):
         # Aggregate mean sentiment score by rating
