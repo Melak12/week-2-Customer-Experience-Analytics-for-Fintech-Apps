@@ -12,3 +12,6 @@ data/
 
 # Any python cache files
 __pycache__/
+
+# Environment variables
+.env
