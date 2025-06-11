@@ -27,17 +27,47 @@ Note: if requirements.txt is missing, you might need to run this command
 
 ## Project Structure
 
-- **notebooks/**: Contains Jupyter notebooks for exploratory data analysis (EDA) and reporting for each bank and the overall app review data. Use these notebooks to interactively explore, visualize, and document findings.
-- **scripts/**: Contains all Python scripts for scraping, preprocessing, sentiment analysis, database management, and utility functions. Key scripts include:
-  - `app_review_scrapper.py`: Scrapes and preprocesses Google Play reviews.
-  - `sentiment_analysis.py`: Performs sentiment analysis and keyword/theme extraction.
-  - `db_manager.py`: Handles PostgreSQL connection and table creation.
-  - `db_io.py`: Handles saving, fetching, and clearing data in the database.
-  - `utils.py`: Shared utility functions and enums.
-- **sql/**: Contains SQL scripts for database setup and schema management. For example, `reviews_db.sql` can be used to manually create or inspect the database schema if needed.
-- **Data/**: Stores all raw, cleaned, and gold-standard review CSVs. Subfolders include:
-  - `cleaned/`: Cleaned review data.
-  - `gold/`: Processed data with sentiment columns.
+The repository is organized as follows:
+
+```
+week-2-Customer-Experience-Analytics-for-Fintech-Apps/
+│
+├── README.md                # Project overview and setup instructions
+├── requirements.txt         # Python dependencies
+│
+├── Data/                    # (Created at runtime) Raw, cleaned, and gold-standard review CSVs
+│   ├── boa_reviews.csv
+│   ├── cbe_reviews.csv
+│   ├── dashen_reviews.csv
+│   ├── cleaned/             # Cleaned review data
+│   └── gold/                # Processed data with sentiment columns
+│
+├── notebooks/               # Jupyter notebooks for EDA and reporting
+│   ├── app_review_eda.ipynb
+│   ├── boa_eda.ipynb
+│   ├── cbe_eda.ipynb
+│   ├── dashen_eda.ipynb
+│   ├── insights_and_recommendations.ipynb
+│   └── README.md            # Documentation for notebooks
+│
+├── scripts/                 # Python scripts for scraping, analysis, and database
+│   ├── app_review_scrapper.py
+│   ├── sentiment_analysis.py
+│   ├── db_manager.py
+│   ├── db_io.py
+│   ├── insights.py
+│   ├── utils.py
+│   └── README.md            # Documentation for scripts
+│
+├── sql/                     # SQL scripts for database setup
+│   └── reviews_db.sql
+│
+└── tests/                   # Unit tests (if any)
+```
+
+- The `Data/` directory is created at runtime and will contain all raw, cleaned, and processed review data.
+- Notebooks and scripts are modular and reusable for different banks and analysis tasks.
+- See each subdirectory's README for more details on usage and workflow.
 
 ---
 
