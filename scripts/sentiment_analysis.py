@@ -142,32 +142,33 @@ class SentimentAnalysis:
 
     def plot_sentiment_distribution(self):
         """
-        Visualize the sentiment distribution for all sentiment methods (VADER, BERT, TEXT_BLOB).
+        Visualize the sentiment distribution for all sentiment methods (VADER, BERT, TEXT_BLOB) in a single grouped bar chart.
         """
-       
-        methods = []
-        sentiment_cols = []
-        if 'vader_sentiment' in self.df.columns:
-            methods.append('VADER')
-            sentiment_cols.append('vader_sentiment')
-        if 'bert_sentiment' in self.df.columns:
-            methods.append('BERT')
-            sentiment_cols.append('bert_sentiment')
-        if 'textblob_sentiment' in self.df.columns:
-            methods.append('TEXT_BLOB')
-            sentiment_cols.append('textblob_sentiment')
-        if not sentiment_cols:
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import pandas as pd
+        # Collect available sentiment columns
+        sentiment_methods = {
+            'VADER': 'vader_sentiment',
+            'BERT': 'bert_sentiment',
+            'TEXT_BLOB': 'textblob_sentiment'
+        }
+        available_methods = [(name, col) for name, col in sentiment_methods.items() if col in self.df.columns]
+        if not available_methods:
             print("No sentiment columns found. Please compute sentiment first.")
             return
-        n_methods = len(sentiment_cols)
-        fig, axes = plt.subplots(1, n_methods, figsize=(6*n_methods, 5))
-        if n_methods == 1:
-            axes = [axes]
-        for ax, method, col in zip(axes, methods, sentiment_cols):
-            sns.countplot(x=self.df[col], order=['positive', 'neutral', 'negative'], ax=ax, palette='viridis', hue=self.df[col])
-            ax.set_title(f"{method} Sentiment Distribution for {self.app_name.value}")
-            ax.legend(title='Sentiment', loc='upper right')
-            ax.set_xlabel("Sentiment")
-            ax.set_ylabel("Count")
+        # Prepare data for grouped bar plot
+        sentiment_counts = []
+        for method, col in available_methods:
+            counts = self.df[col].value_counts().reindex(['positive', 'neutral', 'negative'], fill_value=0)
+            for sentiment, count in counts.items():
+                sentiment_counts.append({'Method': method, 'Sentiment': sentiment, 'Count': count})
+        plot_df = pd.DataFrame(sentiment_counts)
+        plt.figure(figsize=(8, 6))
+        sns.barplot(data=plot_df, x='Sentiment', y='Count', hue='Method', palette='viridis')
+        plt.title(f"Sentiment Distribution by Method for {self.app_name.value}")
+        plt.xlabel("Sentiment")
+        plt.ylabel("Count")
+        plt.legend(title='Method')
         plt.tight_layout()
         plt.show()
