@@ -35,7 +35,7 @@ class SentimentAnalysis:
         self.app_name = app_name
         self.ensure_nltk_resources()
         self.sia = SentimentIntensityAnalyzer()
-        # self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
+        self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
 
     def format_datetime(self):
         # Convert 'date' column to datetime format
@@ -91,7 +91,8 @@ class SentimentAnalysis:
         print("Reviews preprocessed. Tokens extracted.")
         
 
-    def compute_bert_sentiment(self):
+    def _compute_bert_sentiment(self):
+        print("Computing DistilBERT sentiment scores...")
         # Compute DistilBERT sentiment for each review
         def get_bert_label(text):
             try:
@@ -112,7 +113,7 @@ class SentimentAnalysis:
         self.df['bert_score'] = bert_results.apply(lambda x: x[1])
         print("DistilBERT sentiment scores computed.")
     
-    def compute_vader_sentiment(self):
+    def _compute_vader_sentiment(self):
         # Compute VADER sentiment scores for each review
         print("Computing VADER sentiment scores...")
         self.df['vader_score'] = self.df['processed_review'].apply(lambda x: self.sia.polarity_scores(str(x))['compound'])
@@ -121,7 +122,7 @@ class SentimentAnalysis:
         self.df['vader_sentiment'] = self.df['vader_score'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
         print("VADER sentiment scores computed.")
 
-    def compute_textblob_sentiment(self):
+    def _compute_textblob_sentiment(self):
         # Compute TextBlob sentiment polarity for each review
         print("Computing TextBlob sentiment scores...")
         self.df['textblob_score'] = self.df['processed_review'].apply(lambda x: TextBlob(str(x)).sentiment.polarity)
@@ -138,13 +139,13 @@ class SentimentAnalysis:
         """
         # Compute sentiment based on method
         if method == SentimentMethod.VADER:
-            self.compute_vader_sentiment()
+            self._compute_vader_sentiment()
         elif method == SentimentMethod.BERT:
             if not hasattr(self, 'bert_sentiment'):
                 self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
-            self.compute_bert_sentiment()
+            self._compute_bert_sentiment()
         elif method == SentimentMethod.TEXT_BLOB:
-            self.compute_textblob_sentiment()
+            self._compute_textblob_sentiment()
         else:
             raise ValueError(f"Unknown SentimentMethod: {method}")
         # Save to gold CSV
