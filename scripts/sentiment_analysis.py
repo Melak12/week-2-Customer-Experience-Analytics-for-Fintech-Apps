@@ -129,6 +129,34 @@ class SentimentAnalysis:
         self.df['textblob_sentiment'] = self.df['textblob_score'].apply(lambda x: 'positive' if x > 0.05 else ('negative' if x < -0.05 else 'neutral'))
         print("TextBlob sentiment scores computed.")
 
+    def compute_sentiment(self, method: SentimentMethod = SentimentMethod.VADER, save_gold: bool = True):
+        """
+        Compute sentiment for reviews using the specified method and save the results to a gold CSV file.
+        Args:
+            method (SentimentMethod): The sentiment method to use ('vader', 'bert', 'text_blob').
+            save_gold (bool): Whether to save the DataFrame with sentiment columns to a gold CSV file.
+        """
+        # Compute sentiment based on method
+        if method == SentimentMethod.VADER:
+            self.compute_vader_sentiment()
+        elif method == SentimentMethod.BERT:
+            if not hasattr(self, 'bert_sentiment'):
+                self.bert_sentiment = pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
+            self.compute_bert_sentiment()
+        elif method == SentimentMethod.TEXT_BLOB:
+            self.compute_textblob_sentiment()
+        else:
+            raise ValueError(f"Unknown SentimentMethod: {method}")
+        # Save to gold CSV
+        if save_gold:
+            import os
+            gold_dir = os.path.join('..', 'Data', 'gold')
+            os.makedirs(gold_dir, exist_ok=True)
+            bank_name = str(self.app_name.value).lower()
+            gold_path = os.path.join(gold_dir, f"{bank_name}_reviews_gold.csv")
+            self.df.to_csv(gold_path, index=False)
+            print(f"Sentiment results saved to {gold_path}")
+
     def aggregate_sentiment_by_rating(self,  method: SentimentMethod = SentimentMethod.VADER):
         # Aggregate mean sentiment score by rating
         if method == SentimentMethod.BERT:
