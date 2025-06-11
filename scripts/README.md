@@ -267,6 +267,95 @@ pip install psycopg2-binary python-dotenv
 - Table and column names are lowercase for PostgreSQL compatibility.
 - The database must be running locally and accessible with the credentials in your `.env` file.
 
+## Insights Module
+
+The `insights.py` script provides a modular and notebook-friendly class for deriving actionable insights, visualizations, and recommendations from processed fintech app review data. It is designed to work with review data fetched from the database (via `db_io.py`) and supports both reporting and visualization tasks for downstream analytics and presentations.
+
+### Key Class: `Insights`
+
+#### Initialization
+- **`Insights(df)`**: Accepts a pandas DataFrame containing processed review data (with columns such as `bank`, `review`, `date`, `processed_review`, `bert_sentiment`, etc.).
+- On initialization, computes:
+  - Top positive keywords (drivers)
+  - Top negative keywords (pain points)
+  - Sentiment distribution by bank
+  - Predefined recommendations
+
+#### Methods
+
+- **`get_top_keywords(sentiment_col, n=10, positive=True)`**
+  - Returns the top `n` keywords from the `processed_review` column for either positive or negative sentiment, based on the specified sentiment column (e.g., `bert_sentiment`).
+
+- **`plot_sentiment_by_bank()`**
+  - Displays a countplot (bar chart) of review sentiment (positive/negative) for each bank using Seaborn and Matplotlib.
+  - Useful for comparing customer experience across banks.
+
+- **`plot_sentiment_trend()`**
+  - Plots the monthly trend of review sentiment for each bank over time.
+  - Helps identify changes in customer sentiment and the impact of product updates or events.
+
+- **`plot_wordcloud(label)`**
+  - Displays a word cloud of the most frequent keywords for either 'drivers' (positive) or 'pain_points' (negative) reviews.
+  - Useful for quickly visualizing the main topics or issues mentioned by users.
+
+- **`plot_rating_distribution()`**
+  - Plots the distribution of user ratings (if the `rating` column is present in the DataFrame).
+  - Helps assess overall customer satisfaction.
+
+- **`report_drivers()`**
+  - Returns the top positive keywords (drivers) as a pandas Series.
+
+- **`report_pain_points()`**
+  - Returns the top negative keywords (pain points) as a pandas Series.
+
+- **`report_bank_sentiment()`**
+  - Returns a DataFrame showing the count of each sentiment label per bank.
+
+- **`report_recommendations()`**
+  - Returns a list of actionable recommendations for app improvement, based on common drivers and pain points.
+
+- **`report_ethics_note()`**
+  - Returns a note on potential review bias (e.g., self-selection bias, negative skew).
+
+#### Usage Example
+
+```python
+from scripts.db_io import DBIO
+from scripts.insights import Insights
+
+dbio = DBIO()
+df = dbio.fetch_reviews()
+dbio.close()
+insights = Insights(df)
+
+# Display top drivers and pain points
+print(insights.report_drivers())
+print(insights.report_pain_points())
+
+# Visualize sentiment by bank
+insights.plot_sentiment_by_bank()
+
+# Visualize sentiment trend
+insights.plot_sentiment_trend()
+
+# Visualize word clouds
+insights.plot_wordcloud('drivers')
+insights.plot_wordcloud('pain_points')
+
+# Visualize rating distribution
+insights.plot_rating_distribution()
+
+# Show recommendations and ethics note
+print(insights.report_recommendations())
+print(insights.report_ethics_note())
+```
+
+#### Notes
+- All visualization methods display plots inline (using `plt.show()`), making them ideal for Jupyter notebooks.
+- The class is modular: each insight or visualization is a separate method for flexible use in reports or dashboards.
+- The class expects preprocessed and sentiment-labeled data (see `sentiment_analysis.py` for upstream processing).
+- Recommendations are generic and can be customized based on further analysis.
+
 ---
 
 For questions or issues, please refer to the code comments or contact the project maintainer.
